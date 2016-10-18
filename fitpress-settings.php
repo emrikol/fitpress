@@ -9,14 +9,14 @@
 		<div class='form-padding'>
 		<table class='form-table'>
 			<tr valign='top'>
-			<th scope='row'>Client ID:</th>
+			<th scope='row'>OAuth 2.0 Client ID:</th>
 			<td>
 				<input type='text' name='fitpress_api_id' value='<?php echo esc_attr( get_option( 'fitpress_api_id' ) ); ?>' />
 			</td>
 			</tr>
 
 			<tr valign='top'>
-			<th scope='row'>Client consumer Secret:</th>
+			<th scope='row'>Client Secret:</th>
 			<td>
 				<input type='text' name='fitpress_api_secret' value='<?php echo esc_attr( get_option( 'fitpress_api_secret' ) ); ?>' />
 			</td>
@@ -33,11 +33,11 @@
 			<strong>Instructions:</strong>
 			<ol>
 				<li>Register as a FitBit Developer at <a href='https://dev.fitbit.com/' target="_blank">dev.fitbit.com</a>.</li>
-				<li>Click "Register a new app"</li>
-				<li>Enter the basic description, plus your site's homepage URL: <code><?php echo esc_url_raw( $blog_url ); ?></code></li>
-				<li>Set your "redirect_uri" to: <code><?php echo esc_url_raw( admin_url( 'admin-post.php?action=fitpress_auth_callback' ) ); ?></code></li>
+				<li>Click "Register an application"</li>
+				<li>Enter the name, basic description, plus your "Application Website" URL: <code><?php echo esc_url_raw( $blog_url ); ?></code></li>
+				<li>Set your "Callback URL" to: <code><?php echo esc_url_raw( admin_url( 'admin-post.php?action=fitpress_auth_callback' ) ); ?></code></li>
 				<li>Set the "OAuth 2.0 Application Type" type to "Server"</li>
-				<li>Set the "Default Access Type" to "Read-Only", and save </li>
+				<li>Set the "Default Access Type" to "Read-Only", and <em>register</em></li>
 				<li>Paste your Client OAuth2 ID/Secret provided by FitBit into the fields above, then click the Save all settings button.</li>
 			</ol>
 		</p>
