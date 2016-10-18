@@ -13,24 +13,24 @@ class FitBit_API_Client {
 		return $this->get( '/1/user/-/profile.json' )->user;
 	}
 
-	public function get_heart_rate($date) {
-		return $this->get( "/1/user/-/activities/heart/date/".urlencode($date)."/1d.json" )->{'activities-heart'}[0];
+	public function get_heart_rate( $date ) {
+		return $this->get( '/1/user/-/activities/heart/date/' . urlencode( $date ) . '/1d.json' )->{'activities-heart'}[0];
 	}
 
-	public function get_time_series($series_type, $end_date, $range) {
-		return $this->get( "/1/user/-/activities/".urlencode($series_type)."/date/".urlencode($end_date)."/".urlencode($range).".json")->{"activities-$series_type"};
+	public function get_time_series( $series_type, $end_date, $range ) {
+		return $this->get( '/1/user/-/activities/' . urlencode( $series_type ) . '/date/' . urlencode( $end_date ) . '/' . urlencode( $range ) . '.json' )->{"activities-$series_type"};
 	}
 
-	public function post($endpoint, $fields = array()) {		
-		$url = self::API_ROOT.$endpoint;
+	public function post( $endpoint, $fields = array() ) {
+		$url = self::API_ROOT . $endpoint;
 
 		$request = curl_init( $url );
-		
+
 		curl_setopt_array( $request, array(
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER => array('Authorization: Bearer '.$this->auth_token),
+			CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->auth_token ),
 			CURLOPT_POST => true,
-			CURLOPT_POSTFIELDS => http_build_query($fields)
+			CURLOPT_POSTFIELDS => http_build_query( $fields ),
 		) );
 
 		$response = curl_exec( $request );
@@ -48,19 +48,19 @@ class FitBit_API_Client {
 	 */
 	public function get( $endpoint, $query = null ) {
 
-		$query = ( is_array( $query ) ) ? http_build_query( $query ) : $query; 
+		$query = ( is_array( $query ) ) ? http_build_query( $query ) : $query;
 
-		$url = self::API_ROOT.$endpoint;
+		$url = self::API_ROOT . $endpoint;
 
 		if ( $query ) {
-			$url = $url.'?'.$query;
+			$url = $url . '?' . $query;
 		}
 
 		$request = curl_init( $url );
-		
+
 		curl_setopt_array( $request, array(
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER => array('authorization: Bearer '.$this->auth_token)
+			CURLOPT_HTTPHEADER => array( 'authorization: Bearer ' . $this->auth_token ),
 		) );
 
 		$response = curl_exec( $request );
@@ -74,14 +74,14 @@ class FitBit_API_Client {
 }
 
 class FitBit_OAuth2_Client {
-	const AUTHORIZATION_URL = FitBit_API_Client::SITE_ROOT.'/oauth2/authorize';
-	const TOKEN_URL = FitBit_API_Client::API_ROOT.'/oauth2/token';
+	const AUTHORIZATION_URL = FitBit_API_Client::SITE_ROOT . '/oauth2/authorize';
+	const TOKEN_URL = FitBit_API_Client::API_ROOT . '/oauth2/token';
 
 	const EMPTY_CODE = 1;
 	const EMPTY_STATE = 2;
 	const INVALID_STATE = 4;
 	const DEFAULT_TIME_WINDOW = 21600; //3600 * 6
-	const OAUTH_SCOPES = ['activity', 'heartrate', 'location', 'profile', 'settings', 'sleep', 'social', 'weight'];
+	const OAUTH_SCOPES = [ 'activity', 'heartrate', 'location', 'profile', 'settings', 'sleep', 'social', 'weight' ];
 
 	private $id = '';
 	private $secret = '';
@@ -129,7 +129,7 @@ class FitBit_OAuth2_Client {
 			'client_id' => $this->id,
 			'state' => $this->generate_state( $user_id ),
 			'redirect_uri' => $this->redirect_uri,
-			'scope' => join( ' ', self::OAUTH_SCOPES )
+			'scope' => join( ' ', self::OAUTH_SCOPES ),
 		) );
 
 		return sprintf(
@@ -202,7 +202,7 @@ class FitBit_OAuth2_Client {
 			CURLOPT_POST => true,
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_TIMEOUT => $this->http_timeout,
-			CURLOPT_HTTPHEADER => array('Authorization: Basic '.base64_encode("$this->id:$this->secret")),
+			CURLOPT_HTTPHEADER => array( 'Authorization: Basic ' . base64_encode( "$this->id:$this->secret" ) ),
 			CURLOPT_POSTFIELDS => http_build_query( array(
 				'client_id' => $this->id,
 				'client_secret' => $this->secret,

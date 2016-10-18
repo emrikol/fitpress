@@ -14,15 +14,15 @@ define( 'FITPRESS_CLIENT_STATE_KEY', 'this is super secret' );
 
 class FitPress {
 	// singleton class pattern:
-	protected static $instance = NULL;
+	protected static $instance = null;
 	public static function get_instance() {
-		NULL === self::$instance and self::$instance = new self;
+		null === self::$instance and self::$instance = new self;
 		return self::$instance;
 	}
 
 	function __construct() {
 		// hook activation and deactivation for the plugin
-		add_action('init', array($this, 'init'));
+		add_action( 'init', array( $this, 'init' ) );
 	}
 
 	function init() {
