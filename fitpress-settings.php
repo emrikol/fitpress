@@ -34,8 +34,8 @@
 			<ol>
 				<li>Register as a FitBit Developer at <a href='https://dev.fitbit.com/' target="_blank">dev.fitbit.com</a>.</li>
 				<li>Click "Register a new app"</li>
-				<li>Enter the basic description, plus your site's homepage URL: <code><?php echo esc_url_raw( $blog_url ); ?>)</code></li>
-				<li>Set your "redirect_uri" to <code><?php echo esc_url_raw( admin_url( 'admin-post.php?action=fitpress_auth_callback' ) ); ?></code></li>
+				<li>Enter the basic description, plus your site's homepage URL: <code><?php echo esc_url_raw( $blog_url ); ?></code></li>
+				<li>Set your "redirect_uri" to: <code><?php echo esc_url_raw( admin_url( 'admin-post.php?action=fitpress_auth_callback' ) ); ?></code></li>
 				<li>Set the "OAuth 2.0 Application Type" type to "Server"</li>
 				<li>Set the "Default Access Type" to "Read-Only", and save </li>
 				<li>Paste your Client OAuth2 ID/Secret provided by FitBit into the fields above, then click the Save all settings button.</li>
