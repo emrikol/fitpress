@@ -26,18 +26,18 @@ class FitPress {
 	}
 
 	function init() {
-		add_action('admin_enqueue_scripts', array($this, 'fitpress_init_styles'));
-		add_action('admin_menu', array($this, 'fitpress_settings_page'));
-		add_action('admin_init', array($this, 'fitpress_register_settings'));
-		add_action('show_user_profile', array($this, 'fitpress_linked_accounts'));
-		add_action('admin_post_fitpress_auth', array($this, 'fitpress_auth'));
-		add_action('admin_post_fitpress_auth_callback', array($this, 'fitpress_auth_callback'));
-		add_action('admin_post_fitpress_auth_unlink', array($this, 'fitpress_auth_unlink'));
+		add_action( 'admin_enqueue_scripts', array( $this, 'fitpress_init_styles' ) );
+		add_action( 'admin_menu', array( $this, 'fitpress_settings_page' ) );
+		add_action( 'admin_init', array( $this, 'fitpress_register_settings' ) );
+		add_action( 'show_user_profile', array( $this, 'fitpress_linked_accounts' ) );
+		add_action( 'admin_post_fitpress_auth', array( $this, 'fitpress_auth' ) );
+		add_action( 'admin_post_fitpress_auth_callback', array( $this, 'fitpress_auth_callback' ) );
+		add_action( 'admin_post_fitpress_auth_unlink', array( $this, 'fitpress_auth_unlink' ) );
 		// add_shortcode( 'fitbit', array($this, 'fitpress_shortcode') );
-		add_shortcode( 'heartrate', array($this, 'fitpress_shortcode_heartrate') );
-		add_shortcode( 'steps', array($this, 'fitpress_shortcode_steps') );
+		add_shortcode( 'heartrate', array( $this, 'fitpress_shortcode_heartrate' ) );
+		add_shortcode( 'steps', array( $this, 'fitpress_shortcode_steps' ) );
 		wp_register_script( 'jsapi', 'https://www.google.com/jsapi' );
-		add_action( 'wp_enqueue_scripts', array($this, 'fitpress_scripts') );
+		add_action( 'wp_enqueue_scripts', array( $this, 'fitpress_scripts' ) );
 	}
 
 	function fitpress_scripts() {
@@ -46,44 +46,44 @@ class FitPress {
 
 	/**
 	 * Shortcodes
-	 **/ 
+	 **/
 
 	//[heartrate]
-	function fitpress_shortcode_heartrate( $atts ){
+	function fitpress_shortcode_heartrate( $atts ) {
 		$atts = $this->fitpress_shortcode_base( $atts );
 
 		$fitbit = $this->get_fitbit_client();
 
 		try {
-			$result = $fitbit->get_heart_rate($atts['date']);
+			$result = $fitbit->get_heart_rate( $atts['date'] );
 			$output = '<dl>';
-			foreach ($result->value->heartRateZones as $heartRateZone) {
+			foreach ( $result->value->heartRateZones as $heartRateZone ) {
 				$name = $heartRateZone->name;
 				$minutes = $heartRateZone->minutes;
-				$output .= "<dt>{$name}</dt><dd>{$minutes} minutes</dd>";
+				$output .= '<dt>' . esc_html( $name ) . '</dt><dd>' . esc_html( $minutes ) . 'minutes</dd>';
 			}
 			$output .= '</dl>';
 			return $output;
-		} catch(Exception $e) {
-			return print_r($e->getMessage(), true);
+		} catch ( Exception $e ) {
+			return print_r( $e->getMessage(), true );
 		}
 	}
 
 	//[steps]
-	function fitpress_shortcode_steps( $atts ){
+	function fitpress_shortcode_steps( $atts ) {
 		$atts = $this->fitpress_shortcode_base( $atts );
 
 		$fitbit = $this->get_fitbit_client();
 
 		try {
-			$steps = $fitbit->get_time_series('steps', $atts['date'], '7d');
+			$steps = $fitbit->get_time_series( 'steps', $atts['date'], '7d' );
 
 			array_walk($steps, function (&$v, $k) { $v = array($v->dateTime, intval($v->value)); });
 
 			// add header
-			array_unshift($steps, array('Date', 'Steps'));
+			array_unshift( $steps, array( 'Date', 'Steps' ) );
 
-			$steps_json = json_encode($steps);
+			$steps_json = json_encode( $steps );
 
 			$output = '';
 			$output .= <<<ENDHTML
@@ -111,8 +111,8 @@ ENDHTML;
 
 			// $output = print_r($steps, true);
 			return $output;
-		} catch(Exception $e) {
-			return print_r($e->getMessage(), true);
+		} catch ( Exception $e ) {
+			return print_r( $e->getMessage(), true );
 		}
 	}
 
@@ -123,9 +123,9 @@ ENDHTML;
 		), $atts );
 
 		// we only compute this if not supplied because it's expensive to compute
-		if ( $atts['date'] == null ) {
-			$post = get_post(get_the_ID());
-			$atts['date'] = new DateTime($post->post_date);
+		if ( null === $atts['date'] ) {
+			$post = get_post( get_the_ID() );
+			$atts['date'] = new DateTime( $post->post_date );
 		}
 
 		return $atts;
@@ -137,7 +137,7 @@ ENDHTML;
 	 **/
 
 	function fitpress_init_styles() {
-		wp_enqueue_style('fitpress-style', plugin_dir_url( __FILE__ ) . 'fitpress.css', array());
+		wp_enqueue_style( 'fitpress-style', plugin_dir_url( __FILE__ ) . 'fitpress.css', array() );
 	}
 
 	/**
@@ -147,36 +147,36 @@ ENDHTML;
 	function fitpress_linked_accounts() {
 		$user_id = get_current_user_id();
 
-		$fitpress_credentials = get_user_meta($user_id, 'fitpress_credentials', true);
-		$last_error = get_user_meta($user_id, 'fitpress_last_error', true);
+		$fitpress_credentials = get_user_meta( $user_id, 'fitpress_credentials', true );
+		$last_error = get_user_meta( $user_id, 'fitpress_last_error', true );
 
 		// list the wpoa_identity records:
-		echo "<div id='fitpress-linked-accounts'>";
-		echo "<h3>FitBit Account</h3>";
+		echo '<div id="fitpress-linked-accounts">';
+		echo '<h3>FitBit Account</h3>';
 		if ( ! $fitpress_credentials ) {
-			echo "<p>You have not linked your FitBit account.</p>";
+			echo '<p>You have not linked your FitBit account.</p>';
 			echo $this->fitpress_login_button();
 		} else {
-			$unlink_url = admin_url('admin-post.php?action=fitpress_auth_unlink');
+			$unlink_url = admin_url( 'admin-post.php?action=fitpress_auth_unlink' );
 			$name = $fitpress_credentials['name'];
-			echo "<p>Linked account {$name} - <a href='{$unlink_url}'>Unlink</a>";
+			echo '<p>Linked account ' . esc_html( $name ) . ' - <a href="' . esc_url( $unlink_url ) . '">Unlink</a>';
 		}
 		if ( $last_error ) {
-			echo "<p>There was an error connecting your account: {$last_error}</p>";
+			echo '<p>There was an error connecting your account: ' . wp_kses_post( $last_error ) . '</p>';
 		}
 
-		echo "</div>";
+		echo '</div>';
 	}
 
 	private function get_fitbit_oauth2_client() {
-		require_once('fitpress-oauth2-client.php');
+		require_once( 'fitpress-oauth2-client.php' );
 		$user_id = get_current_user_id();
-		$redirect_url = admin_url('admin-post.php?action=fitpress_auth_callback');
-		return  new FitBit_OAuth2_Client(get_option('fitpress_api_id'), get_option('fitpress_api_secret'), $redirect_url, FITPRESS_CLIENT_STATE_KEY);
+		$redirect_url = admin_url( 'admin-post.php?action=fitpress_auth_callback' );
+		return new FitBit_OAuth2_Client( get_option('fitpress_api_id'), get_option('fitpress_api_secret'), esc_url_raw( $redirect_url ), FITPRESS_CLIENT_STATE_KEY );
 	}
 
 	function get_fitbit_client( $access_token = null ) {
-		require_once('fitpress-oauth2-client.php');
+		require_once( 'fitpress-oauth2-client.php' );
 		$user_id = get_current_user_id();
 		$fitpress_credentials = get_user_meta( $user_id, 'fitpress_credentials', true );
 
@@ -208,9 +208,9 @@ ENDHTML;
 		$user_id = get_current_user_id();
 		$oauth_client = $this->get_fitbit_oauth2_client();
 		$auth_response = $oauth_client->process_authorization_grant_request( $user_id );
-		
+
 		if ( is_wp_error( $auth_response ) ) {
-			die(print_r( $auth_response, true ));
+			die( print_r( $auth_response, true ) );
 		}
 
 		$access_token = $auth_response->access_token;
@@ -225,10 +225,10 @@ ENDHTML;
 		$url = admin_url('admin-post.php?action=fitpress_auth');
 
 		// generates and returns a login button for FitPress:
-		$html = "";
-		$html .= "<a id='fitpress-login-fitbit' class='fitpress-login-button' href='{$url}'>";
-		$html .= "Link my FitBit account";
-		$html .= "</a>";
+		$html = '';
+		$html .= '<a id="fitpress-login-fitbit" class="fitpress-login-button" href="' . esc_url( $url ) . '">';
+		$html .= "Link my FitBit account';
+		$html .= '</a>";
 		return $html;
 	}
 
@@ -238,23 +238,23 @@ ENDHTML;
 
 	// registers all settings that have been defined at the top of the plugin:
 	function fitpress_register_settings() {
-		register_setting('fitpress_settings', 'fitpress_api_id');
-		register_setting('fitpress_settings', 'fitpress_api_secret');
-		register_setting('fitpress_settings', 'fitpress_token_override');
+		register_setting( 'fitpress_settings', 'fitpress_api_id' );
+		register_setting( 'fitpress_settings', 'fitpress_api_secret' );
+		register_setting( 'fitpress_settings', 'fitpress_token_override' );
 	}
 
 	// add the main settings page:
 	function fitpress_settings_page() {
-		add_options_page( 'FitPress Options', 'FitPress', 'manage_options', 'FitPress', array($this, 'fitpress_settings_page_content') );
+		add_options_page( 'FitPress Options', 'FitPress', 'manage_options', 'FitPress', array( $this, 'fitpress_settings_page_content' ) );
 	}
 
 	// render the main settings page content:
 	function fitpress_settings_page_content() {
-		if ( !current_user_can( 'manage_options' ) )  {
-			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+		if ( ! current_user_can( 'manage_options' ) )  {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.' ) );
 		}
-		$blog_url = rtrim(site_url(), "/") . "/";
-		include 'fitpress-settings.php';
+		$blog_url = rtrim( site_url(), '/') . '/';
+		include( 'fitpress-settings.php' );
 	}
 
 	/**
@@ -262,10 +262,9 @@ ENDHTML;
 	 */
 
 	private function redirect_to_user( $user_id ) {
-		wp_redirect( get_edit_user_link( $user_id ), 301 );
+		wp_safe_redirect( get_edit_user_link( $user_id ), 301 );
 		exit;
 	}
 }
 
 FitPress::get_instance();
-?>
