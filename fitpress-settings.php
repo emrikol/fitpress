@@ -37,8 +37,8 @@
 				<li>Enter the name, basic description, plus your "Application Website" URL: <code><?php echo esc_url_raw( $blog_url ); ?></code></li>
 				<li>Set your "Callback URL" to: <code><?php echo esc_url_raw( admin_url( 'admin-post.php?action=fitpress_auth_callback' ) ); ?></code></li>
 				<li>Set the "OAuth 2.0 Application Type" type to "Server"</li>
-				<li>Set the "Default Access Type" to "Read-Only", and <em>register</em></li>
-				<li>Paste your Client OAuth2 ID/Secret provided by FitBit into the fields above, then click the Save all settings button.</li>
+				<li>Set the "Default Access Type" to "Read-Only", and hit <em>register</em></li>
+				<li>Paste your <em>OAuth 2.0 Client ID/Client Secret</em> provided by FitBit into the fields above, then click the Save all settings button.</li>
 			</ol>
 		</p>
 		<?php submit_button( 'Save all settings' ); ?>
