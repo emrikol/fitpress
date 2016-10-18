@@ -14,31 +14,34 @@ class FitBit_API_Client {
 	}
 
 	public function get_heart_rate( $date ) {
-		return $this->get( '/1/user/-/activities/heart/date/' . urlencode( $date ) . '/1d.json' )->{'activities-heart'}[0];
+		return $this->get( '/1/user/-/activities/heart/date/' . rawurlencode( $date ) . '/1d.json' )->{'activities-heart'}[0];
 	}
 
 	public function get_time_series( $series_type, $end_date, $range ) {
-		return $this->get( '/1/user/-/activities/' . urlencode( $series_type ) . '/date/' . urlencode( $end_date ) . '/' . urlencode( $range ) . '.json' )->{"activities-$series_type"};
+		return $this->get( '/1/user/-/activities/' . rawurlencode( $series_type ) . '/date/' . rawurlencode( $end_date ) . '/' . rawurlencode( $range ) . '.json' )->{"activities-$series_type"};
 	}
 
 	public function post( $endpoint, $fields = array() ) {
 		$url = self::API_ROOT . $endpoint;
 
-		$request = curl_init( $url );
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $this->auth_token,
+			),
+			'body' => $fields,
+		);
 
-		curl_setopt_array( $request, array(
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->auth_token ),
-			CURLOPT_POST => true,
-			CURLOPT_POSTFIELDS => http_build_query( $fields ),
-		) );
+		$response = wp_remote_post( $url, $args );
 
-		$response = curl_exec( $request );
-		$return = json_decode( $response );
-		if ( ! $return ) {
+		if ( is_wp_error( $response ) ) {
+			$error_message = $response->get_error_message();
+			echo 'Something went wrong: ' . esc_html( $error_message );
 			$return = (object) array();
+		} else {
+			$return = json_decode( $response['body'] );
+			$return->http_response_code = $response['response']['code'];
 		}
-		$return->http_response_code = curl_getinfo( $request, CURLINFO_HTTP_CODE );
+
 		return $return;
 	}
 
@@ -56,19 +59,23 @@ class FitBit_API_Client {
 			$url = $url . '?' . $query;
 		}
 
-		$request = curl_init( $url );
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $this->auth_token,
+			),
+		);
 
-		curl_setopt_array( $request, array(
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER => array( 'authorization: Bearer ' . $this->auth_token ),
-		) );
+		$response = wp_remote_post( $url, $args );
 
-		$response = curl_exec( $request );
-		$return = json_decode( $response );
-		if ( ! $return ) {
+		if ( is_wp_error( $response ) ) {
+			$error_message = $response->get_error_message();
+			echo 'Something went wrong: ' . esc_html( $error_message );
 			$return = (object) array();
+		} else {
+			$return = json_decode( $response['body'] );
+			$return->http_response_code = $response['response']['code'];
 		}
-		$return->http_response_code = curl_getinfo( $request, CURLINFO_HTTP_CODE );
+
 		return $return;
 	}
 }
@@ -80,7 +87,7 @@ class FitBit_OAuth2_Client {
 	const EMPTY_CODE = 1;
 	const EMPTY_STATE = 2;
 	const INVALID_STATE = 4;
-	const DEFAULT_TIME_WINDOW = 21600; //3600 * 6
+	const DEFAULT_TIME_WINDOW = HOUR_IN_SECONDS * 6;
 	const OAUTH_SCOPES = [ 'activity', 'heartrate', 'location', 'profile', 'settings', 'sleep', 'social', 'weight' ];
 
 	private $id = '';
@@ -161,7 +168,7 @@ class FitBit_OAuth2_Client {
 
 		$token_response = $this->get_access_token( $request['code'] );
 
-		if ( $token_response->http_response_code != 200 ) {
+		if ( 200 !== $token_response->http_response_code ) {
 			return new WP_Error( $token_response->errors[0]->errorType, $token_response->errors[0]->message );
 		} else {
 			return $token_response;
@@ -190,38 +197,37 @@ class FitBit_OAuth2_Client {
 	private function get_request() {
 		// If this is running inside WordPress, we need to unslash $_GET
 		if ( function_exists( 'wp_unslash' ) ) {
-			return wp_unslash( $_GET );
+			return wp_unslash( $_GET ); // Input Var Ok.
 		}
 
-		return $_GET;
+		return $_GET; // Input Var Ok.
 	}
 
 	private function get_access_token( $authorization_code ) {
-		$request = curl_init( self::TOKEN_URL );
-		curl_setopt_array( $request, array(
-			CURLOPT_POST => true,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_TIMEOUT => $this->http_timeout,
-			CURLOPT_HTTPHEADER => array( 'Authorization: Basic ' . base64_encode( "$this->id:$this->secret" ) ),
-			CURLOPT_POSTFIELDS => http_build_query( array(
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "$this->id:$this->secret" ),
+			),
+			'body' => array(
 				'client_id' => $this->id,
 				'client_secret' => $this->secret,
 				'redirect_uri' => $this->redirect_uri,
 				'code' => $authorization_code,
 				'grant_type' => 'authorization_code',
-			) ),
-		) );
+			),
+		);
 
-		if ( defined( 'CURLOPT_SAFE_UPLOAD' ) ) {
-			curl_setopt( $request, CURLOPT_SAFE_UPLOAD, true );
-		}
+		$response = wp_remote_post( self::TOKEN_URL, $args );
 
-		$response = curl_exec( $request );
-		$return = json_decode( $response );
-		if ( ! $return ) {
+		if ( is_wp_error( $response ) ) {
+			$error_message = $response->get_error_message();
+			echo 'Something went wrong: ' . esc_html( $error_message );
 			$return = (object) array();
+		} else {
+			$return = json_decode( $response['body'] );
+			$return->http_response_code = $response['response']['code'];
 		}
-		$return->http_response_code = curl_getinfo( $request, CURLINFO_HTTP_CODE );
+
 		return $return;
 	}
 }
