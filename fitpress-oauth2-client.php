@@ -10,15 +10,29 @@ class FitBit_API_Client {
 	}
 
 	public function get_current_user_info() {
-		return $this->get( '/1/user/-/profile.json' )->user;
+		$data = $this->get( '/1/user/-/profile.json' );
+
+		if ( isset( $data->errors ) ) {
+			return new WP_Error( $data->errors[0]->errorType, $data->errors[0]->message );
+		}
+
+		return $data->user;
 	}
 
 	public function get_heart_rate( $date ) {
-		return $this->get( '/1/user/-/activities/heart/date/' . rawurlencode( $date ) . '/1d.json' )->{'activities-heart'}[0];
+		$data = $this->get( '/1/user/-/activities/heart/date/' . rawurlencode( $date ) . '/1d.json' );
+		if ( isset( $data->errors ) ) {
+			return new WP_Error( $data->errors[0]->errorType, $data->errors[0]->message );
+		}
+		return $data->{'activities-heart'}[0];
 	}
 
 	public function get_time_series( $series_type, $end_date, $range ) {
-		return $this->get( '/1/user/-/activities/' . rawurlencode( $series_type ) . '/date/' . rawurlencode( $end_date ) . '/' . rawurlencode( $range ) . '.json' )->{"activities-$series_type"};
+		$data = $this->get( '/1/user/-/activities/' . rawurlencode( $series_type ) . '/date/' . rawurlencode( $end_date ) . '/' . rawurlencode( $range ) . '.json' );
+		if ( isset( $data->errors ) ) {
+			return new WP_Error( $data->errors[0]->errorType, $data->errors[0]->message );
+		}
+		return $data->{"activities-$series_type"};
 	}
 
 	public function post( $endpoint, $fields = array() ) {
@@ -50,7 +64,6 @@ class FitBit_API_Client {
 	 * @param array $query, e.g. array('fields' => 'ID,title')
 	 */
 	public function get( $endpoint, $query = null ) {
-
 		$query = ( is_array( $query ) ) ? http_build_query( $query ) : $query;
 
 		$url = self::API_ROOT . $endpoint;

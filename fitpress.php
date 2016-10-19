@@ -47,68 +47,77 @@ class FitPress {
 	 * Shortcodes
 	 **/
 	function fitpress_shortcode_heartrate( $atts ) {
+		$atts = shortcode_atts( array(
+			'date' => 'today',
+		), $atts );
+
 		$atts = $this->fitpress_shortcode_base( $atts );
 
 		$fitbit = $this->get_fitbit_client();
 
-		try {
-			$result = $fitbit->get_heart_rate( $atts['date'] );
-			$output = '<dl>';
-			foreach ( $result->value->heartRateZones as $heartRateZone ) {
-				$name = $heartRateZone->name;
-				$minutes = $heartRateZone->minutes; // @codingStandardsIgnoreLine
-				$output .= '<dt>' . esc_html( $name ) . '</dt><dd>' . esc_html( $minutes ) . 'minutes</dd>';
-			}
-			$output .= '</dl>';
-			return $output;
-		} catch ( Exception $e ) {
-			return $e->getMessage();
+		$result = $fitbit->get_heart_rate( $atts['date'] );
+
+		if ( is_wp_error( $result ) ) {
+			return $result->get_error_message();
 		}
+
+		$output = '<dl>';
+		foreach ( $result->value->heartRateZones as $heartRateZone ) {
+			$name = $heartRateZone->name;
+			$minutes = $heartRateZone->minutes; // @codingStandardsIgnoreLine
+			$output .= '<dt>' . esc_html( $name ) . '</dt><dd>' . esc_html( $minutes ) . 'minutes</dd>';
+		}
+		$output .= '</dl>';
+		return $output;
 	}
 
 	function fitpress_shortcode_steps( $atts ) {
+		$atts = shortcode_atts( array(
+			'date' => 'today',
+		), $atts );
+
 		$atts = $this->fitpress_shortcode_base( $atts );
 
 		$fitbit = $this->get_fitbit_client();
 
-		try {
-			$steps = $fitbit->get_time_series( 'steps', $atts['date'], '7d' );
+		$steps = $fitbit->get_time_series( 'steps', $atts['date'], '7d' );
 
-			array_walk( $steps, function ( &$v, $k ) { $v = array( $v->dateTime, intval( $v->value ) ); } );
+		if ( is_wp_error( $steps ) ) {
+			return $steps->get_error_message();
+		}
 
-			// add header
-			array_unshift( $steps, array( 'Date', 'Steps' ) );
+		array_walk( $steps, function ( &$v, $k ) { $v = array( $v->dateTime, intval( $v->value ) ); } );
 
-			$steps_json = json_encode( $steps );
+		// add header
+		array_unshift( $steps, array( 'Date', 'Steps' ) );
 
-			$output = '';
-			$output .= <<<ENDHTML
+		$steps_json = json_encode( $steps );
+
+		$output = '';
+		$output .= <<<ENDHTML
 <script type="text/javascript">
 	google.load('visualization', '1.0', {'packages':['corechart', 'bar']});
 	google.setOnLoadCallback(function() {
 		var data = google.visualization.arrayToDataTable({$steps_json});
 		var options = {
-	        title: 'Steps per day',
-	        hAxis: {
-	          title: 'Date',
-	          format: 'Y-m-d'
-	        },
-	        vAxis: {
-	          title: 'Steps'
-	        }
-	    };
-	    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-	    chart.draw(data, options);
+			title: 'Steps per day',
+			hAxis: {
+				title: 'Date',
+				format: 'Y-m-d'
+			},
+			vAxis: {
+				title: 'Steps'
+			}
+		};
+		var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+		chart.draw(data, options);
 	});
 
 </script>
 <div id="chart_div"></div>
 ENDHTML;
 
-			return $output;
-		} catch ( Exception $e ) {
-			return $e->getMessage();
-		}
+		return $output;
 	}
 
 	// common functionality for shortcodes
@@ -157,10 +166,13 @@ ENDHTML;
 			echo '<p>Linked account ' . esc_html( $name ) . ' - <a href="' . esc_url( $unlink_url ) . '">Unlink</a>';
 		}
 		if ( $last_error ) {
-			echo '<p>There was an error connecting your account: ' . wp_kses_post( $last_error ) . '</p>';
+			echo '<p><strong>ERROR: </strong> There was an error connecting your account: ' . wp_kses_post( $last_error ) . '</p>';
 		}
 
 		echo '</div>';
+
+		// Error was shown, delete
+		delete_user_meta( $user_id, 'fitpress_last_error' );
 	}
 
 	private function get_fitbit_oauth2_client() {
@@ -211,7 +223,12 @@ ENDHTML;
 		$access_token = $auth_response->access_token;
 		$user_info = $this->get_fitbit_client( $access_token )->get_current_user_info();
 
-		update_user_meta( get_current_user_id(), 'fitpress_credentials', array( 'token' => $access_token, 'name' => $user_info->fullName ) );
+		if ( is_wp_error( $user_info ) ) {
+			update_user_meta( $user_id, 'fitpress_last_error', $user_info->get_error_message() );
+			$this->redirect_to_user( $user_id );
+		}
+
+		update_user_meta( $user_id, 'fitpress_credentials', array( 'token' => $access_token, 'name' => $user_info->fullName ) );
 
 		$this->redirect_to_user( $user_id );
 	}
