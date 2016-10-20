@@ -40,7 +40,7 @@ class FitPress {
 		add_filter( 'allowed_redirect_hosts' , array( $this, 'fitpress_allowed_hosts' ) , 10 );
 	}
 
-	function fitpress_allowed_hosts( $hosts ){
+	function fitpress_allowed_hosts( $hosts ) {
 		$hosts[] = 'www.fitbit.com';
 		$hosts[] = 'api.fitbit.com';
 		return $hosts;
@@ -98,7 +98,7 @@ class FitPress {
 		// add header
 		array_unshift( $steps, array( 'Date', 'Steps' ) );
 
-		$steps_json = json_encode( $steps );
+		$steps_json = wp_json_encode( $steps );
 
 		$output = '';
 		$output .= <<<ENDHTML
@@ -203,7 +203,7 @@ ENDHTML;
 		return $client;
 	}
 
-	//redirect out to FitBit authorization URL
+	// redirect out to FitBit authorization URL
 	function fitpress_auth() {
 		$oauth_client = $this->get_fitbit_oauth2_client();
 		$auth_url = $oauth_client->generate_authorization_url( get_current_user_id() );
@@ -211,7 +211,7 @@ ENDHTML;
 		exit;
 	}
 
-	//delete stored fitbit token
+	// delete stored fitbit token
 	function fitpress_auth_unlink() {
 		$user_id = get_current_user_id();
 		$this->fitpress_delete_user_meta( $user_id, 'fitpress_credentials' );

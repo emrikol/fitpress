@@ -78,8 +78,7 @@ class FitBit_API_Client {
 			),
 		);
 
-		$response = wp_remote_post( $url, $args );
-
+		$response = wp_remote_get( $url, $args );
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 			echo 'Something went wrong: ' . esc_html( $error_message );
