@@ -86,9 +86,44 @@ class FitBit_API_Client {
 		} else {
 			$return = json_decode( $response['body'] );
 			$return->http_response_code = $response['response']['code'];
+
+			// Expired token?  Refresh and retry.
+			//if ( '/1/user/-/activities/heart/date/2016-09-03/1d.json' === $endpoint ) { // Testing, remove.
+			if ( isset( $return->errors ) && is_array( $return->errors ) && 'expired_token' === $return->errors[0]->errorType ) {
+				$this->check_token_refresh( $this->auth_token );
+				$secondary_response = wp_remote_get( $url, $args );
+				if ( is_wp_error( $secondary_response ) ) {
+					$return = (object) array();
+				} else {
+					$return = json_decode( $secondary_response['body'] );
+					$return->http_response_code = $secondary_response['response']['code'];
+				}
+			}
+
 		}
 
 		return $return;
+	}
+
+	function auth_token_to_user_id( $auth_token ) {
+		$fitpress_options = get_option( 'fitpress' );
+
+		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
+			foreach ( $fitpress_options['user_meta'] as $user_id => $user_meta ) {
+				if ( isset( $user_meta['fitpress_credentials']['token'] ) && $user_meta['fitpress_credentials']['token'] === $auth_token ) {
+					return $user_id;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	function check_token_refresh( $auth_token ) {
+		require_once( 'fitpress-oauth2-client.php' );
+		$user_id = $this->auth_token_to_user_id( $auth_token );
+		$oauth_client = FitPress::get_fitbit_oauth2_client();
+		$auth_url = $oauth_client->refresh_access_token( $auth_token, $user_id );
 	}
 }
 
@@ -218,7 +253,7 @@ class FitBit_OAuth2_Client {
 	private function get_access_token( $authorization_code ) {
 		$args = array(
 			'headers' => array(
-				'Authorization' => 'Basic ' . base64_encode( "$this->id:$this->secret" ),
+				'Authorization' => 'Basic ' . base64_encode( $this->id . ':' . $this->secret ),
 			),
 			'body' => array(
 				'client_id' => $this->id,
@@ -232,11 +267,41 @@ class FitBit_OAuth2_Client {
 		$response = wp_remote_post( self::TOKEN_URL, $args );
 
 		if ( is_wp_error( $response ) ) {
-			$error_message = $response->get_error_message();
-			echo 'Something went wrong: ' . esc_html( $error_message );
-			$return = (object) array();
+			$return = $response;
 		} else {
 			$return = json_decode( $response['body'] );
+			$return->http_response_code = $response['response']['code'];
+		}
+
+		return $return;
+	}
+
+	public function refresh_access_token( $auth_token, $user_id ) {
+		$fitpress_credentials = FitPress::fitpress_get_user_meta( $user_id, 'fitpress_credentials' );
+		$refresh_token = $fitpress_credentials['refresh_token'];
+
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( $this->id . ':' . $this->secret ),
+			),
+			'body' => array(
+				'grant_type' => 'refresh_token',
+				'refresh_token' => $refresh_token,
+			),
+		);
+
+		$response = wp_remote_post( self::TOKEN_URL, $args );
+
+		if ( is_wp_error( $response ) ) {
+			$return = $response;
+		} else {
+			$return = json_decode( $response['body'] );
+
+			$fitpress_credentials['token'] = $return->access_token;
+			$fitpress_credentials['refresh_token'] = $return->refresh_token;
+
+			FitPress::fitpress_update_user_meta( $user_id, 'fitpress_credentials', $fitpress_credentials );
+
 			$return->http_response_code = $response['response']['code'];
 		}
 

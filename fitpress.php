@@ -177,7 +177,7 @@ ENDHTML;
 		$this->fitpress_delete_user_meta( $user_id, 'fitpress_last_error' );
 	}
 
-	private function get_fitbit_oauth2_client() {
+	public static function get_fitbit_oauth2_client() {
 		require_once( 'fitpress-oauth2-client.php' );
 		$user_id = get_current_user_id();
 		$redirect_url = admin_url( 'admin-post.php?action=fitpress_auth_callback' );
@@ -213,7 +213,7 @@ ENDHTML;
 		$this->redirect_to_user( $user_id );
 	}
 
-	function fitpress_get_user_meta( $user_id, $meta_key ) {
+	public static function fitpress_get_user_meta( $user_id, $meta_key ) {
 		$fitpress_options = get_option( 'fitpress' );
 
 		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
@@ -228,7 +228,7 @@ ENDHTML;
 		return false;
 	}
 
-	function fitpress_update_user_meta( $user_id, $meta_key, $meta_value ) {
+	public static function fitpress_update_user_meta( $user_id, $meta_key, $meta_value ) {
 		$fitpress_options = get_option( 'fitpress' );
 
 		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
@@ -244,7 +244,7 @@ ENDHTML;
 		update_option( 'fitpress', $fitpress_options, false );
 	}
 
-	function fitpress_delete_user_meta( $user_id, $meta_key ) {
+	public static function fitpress_delete_user_meta( $user_id, $meta_key ) {
 		$fitpress_options = get_option( 'fitpress' );
 
 		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
