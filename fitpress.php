@@ -55,10 +55,13 @@ class FitPress {
 	 **/
 	function fitpress_shortcode_heartrate( $atts ) {
 		$atts = shortcode_atts( array(
-			'date' => 'today',
+			'date' => null,
 		), $atts );
 
-		$atts = $this->fitpress_shortcode_base( $atts );
+		if ( null === $atts['date'] ) {
+			$post = get_post( get_the_ID() );
+			$atts['date'] = new DateTime( $post->post_date );
+		}
 
 		$fitbit = $this->get_fitbit_client();
 
@@ -79,15 +82,22 @@ class FitPress {
 	}
 
 	function fitpress_shortcode_steps( $atts ) {
-		$atts = shortcode_atts( array(
-			'date' => 'today',
-		), $atts );
+		// We need a unique ID just in case the shortcode is used more than once on a page.
+		static $instance = 1;
 
-		$atts = $this->fitpress_shortcode_base( $atts );
+		$atts = shortcode_atts( array(
+			'date' => null,
+			'period' => '7d',
+		), $atts, 'steps' );
+
+		if ( null === $atts['date'] ) {
+			$post = get_post( get_the_ID() );
+			$atts['date'] = new DateTime( $post->post_date );
+		}
 
 		$fitbit = $this->get_fitbit_client();
 
-		$steps = $fitbit->get_time_series( 'steps', $atts['date'], '7d' );
+		$steps = $fitbit->get_time_series( 'steps', $atts['date'], $atts['period'] );
 
 		if ( is_wp_error( $steps ) ) {
 			return $steps->get_error_message();
@@ -116,32 +126,17 @@ class FitPress {
 				title: 'Steps'
 			}
 		};
-		var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+		var chart = new google.visualization.ColumnChart(document.getElementById('chart_div-{$instance}'));
 		chart.draw(data, options);
 	});
 
 </script>
-<div id="chart_div"></div>
+<div id="chart_div-{$instance}"></div>
 ENDHTML;
 
+		$instance++;
 		return $output;
 	}
-
-	// common functionality for shortcodes
-	function fitpress_shortcode_base( $atts ) {
-		$atts = shortcode_atts( array(
-		    'date' => null,
-		), $atts );
-
-		// we only compute this if not supplied because it's expensive to compute
-		if ( null === $atts['date'] ) {
-			$post = get_post( get_the_ID() );
-			$atts['date'] = new DateTime( $post->post_date );
-		}
-
-		return $atts;
-	}
-
 
 	/**
 	 * CSS and javascript
