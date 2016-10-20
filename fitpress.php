@@ -37,6 +37,13 @@ class FitPress {
 		add_shortcode( 'steps', array( $this, 'fitpress_shortcode_steps' ) );
 		wp_register_script( 'jsapi', 'https://www.google.com/jsapi' );
 		add_action( 'wp_enqueue_scripts', array( $this, 'fitpress_scripts' ) );
+		add_filter( 'allowed_redirect_hosts' , array( $this, 'fitpress_allowed_hosts' ) , 10 );
+	}
+
+	function fitpress_allowed_hosts( $hosts ){
+		$hosts[] = 'www.fitbit.com';
+		$hosts[] = 'api.fitbit.com';
+		return $hosts;
 	}
 
 	function fitpress_scripts() {
@@ -151,8 +158,8 @@ ENDHTML;
 	function fitpress_linked_accounts() {
 		$user_id = get_current_user_id();
 
-		$fitpress_credentials = get_user_meta( $user_id, 'fitpress_credentials', true );
-		$last_error = get_user_meta( $user_id, 'fitpress_last_error', true );
+		$fitpress_credentials = $this->fitpress_get_user_meta( $user_id, 'fitpress_credentials' );
+		$last_error = $this->fitpress_get_user_meta( $user_id, 'fitpress_last_error' );
 
 		// list the wpoa_identity records:
 		echo '<div id="fitpress-linked-accounts">';
@@ -172,7 +179,7 @@ ENDHTML;
 		echo '</div>';
 
 		// Error was shown, delete
-		delete_user_meta( $user_id, 'fitpress_last_error' );
+		$this->fitpress_delete_user_meta( $user_id, 'fitpress_last_error' );
 	}
 
 	private function get_fitbit_oauth2_client() {
@@ -185,7 +192,7 @@ ENDHTML;
 	function get_fitbit_client( $access_token = null ) {
 		require_once( 'fitpress-oauth2-client.php' );
 		$user_id = get_current_user_id();
-		$fitpress_credentials = get_user_meta( $user_id, 'fitpress_credentials', true );
+		$fitpress_credentials = $this->fitpress_get_user_meta( $user_id, 'fitpress_credentials' );
 
 		if ( ! $access_token && $fitpress_credentials ) {
 			$access_token = $fitpress_credentials['token'];
@@ -200,15 +207,62 @@ ENDHTML;
 	function fitpress_auth() {
 		$oauth_client = $this->get_fitbit_oauth2_client();
 		$auth_url = $oauth_client->generate_authorization_url( get_current_user_id() );
-		wp_redirect( $auth_url );
+		wp_safe_redirect( $auth_url );
 		exit;
 	}
 
 	//delete stored fitbit token
 	function fitpress_auth_unlink() {
 		$user_id = get_current_user_id();
-		delete_user_meta( $user_id, 'fitpress_credentials' );
+		$this->fitpress_delete_user_meta( $user_id, 'fitpress_credentials' );
 		$this->redirect_to_user( $user_id );
+	}
+
+	function fitpress_get_user_meta( $user_id, $meta_key ) {
+		$fitpress_options = get_option( 'fitpress' );
+
+		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
+			$fitpress_user_meta = $fitpress_options['user_meta'];
+
+			if ( isset( $fitpress_user_meta[ $user_id ] ) && is_array( $fitpress_user_meta[ $user_id ] ) ) {
+				if ( isset( $fitpress_user_meta[ $user_id ][ $meta_key ] ) ) {
+					return $fitpress_user_meta[ $user_id ][ $meta_key ];
+				}
+			}
+		}
+		return false;
+	}
+
+	function fitpress_update_user_meta( $user_id, $meta_key, $meta_value ) {
+		$fitpress_options = get_option( 'fitpress' );
+
+		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
+			$fitpress_user_meta = $fitpress_options['user_meta'];
+		} else {
+			$fitpress_user_meta = array();
+		}
+
+		$fitpress_user_meta[ $user_id ][ $meta_key ] = $meta_value;
+
+		$fitpress_options['user_meta'] = $fitpress_user_meta;
+
+		update_option( 'fitpress', $fitpress_options, false );
+	}
+
+	function fitpress_delete_user_meta( $user_id, $meta_key ) {
+		$fitpress_options = get_option( 'fitpress' );
+
+		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
+			$fitpress_user_meta = $fitpress_options['user_meta'];
+		} else {
+			$fitpress_user_meta = array();
+		}
+
+		unset( $fitpress_user_meta[ $user_id ][ $meta_key ] );
+
+		$fitpress_options['user_meta'] = $fitpress_user_meta;
+
+		update_option( 'fitpress', $fitpress_options, false );
 	}
 
 	function fitpress_auth_callback() {
@@ -224,11 +278,17 @@ ENDHTML;
 		$user_info = $this->get_fitbit_client( $access_token )->get_current_user_info();
 
 		if ( is_wp_error( $user_info ) ) {
-			update_user_meta( $user_id, 'fitpress_last_error', $user_info->get_error_message() );
+			$this->fitpress_update_user_meta( $user_id, 'fitpress_last_error', $user_info->get_error_message() );
 			$this->redirect_to_user( $user_id );
 		}
 
-		update_user_meta( $user_id, 'fitpress_credentials', array( 'token' => $access_token, 'name' => $user_info->fullName ) );
+		$auth_meta = array(
+			'token' => $access_token,
+			'refresh_token' => $auth_response->refresh_token,
+			'name' => $user_info->fullName,
+		);
+
+		$this->fitpress_update_user_meta( $user_id, 'fitpress_credentials', $auth_meta );
 
 		$this->redirect_to_user( $user_id );
 	}
