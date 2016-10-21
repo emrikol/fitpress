@@ -28,7 +28,7 @@ class FitBit_API_Client {
 	}
 
 	public function get_heart_rate( $date ) {
-		$cache_key = md5( 'fitpress:get_heart_rate:' . $date . ':'. $this->auth_token );
+		$cache_key = md5( 'fitpress:get_heart_rate:' . $date . ':' . $this->auth_token );
 		$data = get_transient( $cache_key );
 
 		if ( false === $data ) {
@@ -40,7 +40,7 @@ class FitBit_API_Client {
 			}
 
 			$diff_date = new DateTime( $date );
-			$diff_today = new DateTime("01-04-2016");
+			$diff_today = new DateTime();
 
 			// Default cache forever.
 			$expiry = 0;
@@ -55,7 +55,7 @@ class FitBit_API_Client {
 	}
 
 	public function get_time_series( $series_type, $end_date, $range ) {
-		$cache_key = md5( 'fitpress:get_time_series:' . $series_type . ':'. $end_date . ':'. $range . ':'. $this->auth_token );
+		$cache_key = md5( 'fitpress:get_time_series:' . $series_type . ':' . $end_date . ':' . $range . ':' . $this->auth_token );
 		$data = get_transient( $cache_key );
 
 		if ( false === $data ) {
@@ -67,7 +67,7 @@ class FitBit_API_Client {
 			}
 
 			$diff_date = new DateTime( $end_date );
-			$diff_today = new DateTime("01-04-2016");
+			$diff_today = new DateTime();
 
 			// Default cache forever.
 			$expiry = 0;
@@ -132,7 +132,6 @@ class FitBit_API_Client {
 			$return->http_response_code = $response['response']['code'];
 
 			// Expired token?  Refresh and retry.
-			//if ( '/1/user/-/activities/heart/date/2016-09-03/1d.json' === $endpoint ) { // Testing, remove.
 			if ( isset( $return->errors ) && is_array( $return->errors ) && 'expired_token' === $return->errors[0]->errorType ) {
 				$this->check_token_refresh( $this->auth_token );
 				$secondary_response = wp_remote_get( $url, $args );
@@ -143,7 +142,6 @@ class FitBit_API_Client {
 					$return->http_response_code = $secondary_response['response']['code'];
 				}
 			}
-
 		}
 
 		return $return;

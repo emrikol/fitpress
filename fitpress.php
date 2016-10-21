@@ -26,7 +26,6 @@ class FitPress {
 	}
 
 	function init() {
-		add_action( 'admin_enqueue_scripts', array( $this, 'fitpress_init_styles' ) );
 		add_action( 'admin_menu', array( $this, 'fitpress_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'fitpress_register_settings' ) );
 		add_action( 'show_user_profile', array( $this, 'fitpress_linked_accounts' ) );
@@ -72,9 +71,9 @@ class FitPress {
 		}
 
 		$output = '<dl>';
-		foreach ( $result->value->heartRateZones as $heartRateZone ) {
-			$name = $heartRateZone->name;
-			$minutes = $heartRateZone->minutes; // @codingStandardsIgnoreLine
+		foreach ( $result->value->heartRateZones as $heart_rate_zone ) {
+			$name = $heart_rate_zone->name;
+			$minutes = $heart_rate_zone->minutes; // @codingStandardsIgnoreLine
 			$output .= '<dt>' . esc_html( $name ) . '</dt><dd>' . esc_html( $minutes ) . 'minutes</dd>';
 		}
 		$output .= '</dl>';
@@ -103,7 +102,12 @@ class FitPress {
 			return $steps->get_error_message();
 		}
 
-		array_walk( $steps, function ( &$v, $k ) { $v = array( $v->dateTime, intval( $v->value ) ); } );
+		array_walk( $steps, function ( &$v, $k ) {
+			$v = array(
+				$v->dateTime,
+				intval( $v->value ),
+			);
+		} );
 
 		// add header
 		array_unshift( $steps, array( 'Date', 'Steps' ) );
@@ -136,14 +140,6 @@ ENDHTML;
 
 		$instance++;
 		return $output;
-	}
-
-	/**
-	 * CSS and javascript
-	 **/
-
-	function fitpress_init_styles() {
-		wp_enqueue_style( 'fitpress-style', plugin_dir_url( __FILE__ ) . 'fitpress.css', array() );
 	}
 
 	/**
@@ -321,7 +317,7 @@ ENDHTML;
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.' ) );
 		}
 		$blog_url = rtrim( site_url(), '/' ) . '/';
-		include( 'fitpress-settings.php' );
+		include( 'inc/fitpress-settings.php' );
 	}
 
 	/**
