@@ -63,7 +63,7 @@ class FitPress {
 			$atts['date'] = new DateTime( $post->post_date );
 		}
 
-		$fitbit = $this->get_fitbit_client();
+		$fitbit = $this->fitbit_api();
 
 		$result = $fitbit->get_heart_rate( $atts['date'] );
 
@@ -95,7 +95,7 @@ class FitPress {
 			$atts['date'] = new DateTime( $post->post_date );
 		}
 
-		$fitbit = $this->get_fitbit_client();
+		$fitbit = $this->fitbit_api();
 
 		$steps = $fitbit->get_time_series( 'steps', $atts['date'], $atts['period'] );
 
@@ -178,14 +178,14 @@ ENDHTML;
 	}
 
 	public static function get_fitbit_oauth2_client() {
-		require_once( 'fitpress-oauth2-client.php' );
+		require_once( 'inc/fitpress-oauth2-client.php' );
 		$user_id = get_current_user_id();
 		$redirect_url = admin_url( 'admin-post.php?action=fitpress_auth_callback' );
 		return new FitBit_OAuth2_Client( get_option( 'fitpress_api_id' ), get_option( 'fitpress_api_secret' ), esc_url_raw( $redirect_url ), FITPRESS_CLIENT_STATE_KEY );
 	}
 
-	function get_fitbit_client( $access_token = null ) {
-		require_once( 'fitpress-oauth2-client.php' );
+	function fitbit_api( $access_token = null ) {
+		require_once( 'inc/fitpress-api.php' );
 		$user_id = get_current_user_id();
 		$fitpress_credentials = $this->fitpress_get_user_meta( $user_id, 'fitpress_credentials' );
 
@@ -270,7 +270,7 @@ ENDHTML;
 		}
 
 		$access_token = $auth_response->access_token;
-		$user_info = $this->get_fitbit_client( $access_token )->get_current_user_info();
+		$user_info = $this->fitbit_api( $access_token )->get_current_user_info();
 
 		if ( is_wp_error( $user_info ) ) {
 			$this->fitpress_update_user_meta( $user_id, 'fitpress_last_error', $user_info->get_error_message() );
