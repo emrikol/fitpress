@@ -1,3 +1,11 @@
+<?php
+/**
+ * FitPress Settings Page
+ *
+ * @package  WordPress
+ */
+
+?>
 <div class='wrap fitpress-settings'>
 	<h2>FitPress Settings</h2>
 

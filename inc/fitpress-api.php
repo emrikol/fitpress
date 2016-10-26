@@ -1,13 +1,48 @@
 <?php
+/**
+ * FitBit_API_Client
+ *
+ * @category Class
+ * @package  WordPress
+ */
+
+/**
+ * Generic functions to interact with the FitBit API
+ *
+ * @param string $auth_token The oAuth2 Authorization token.
+ */
 class FitBit_API_Client {
 	const SITE_ROOT = 'https://www.fitbit.com';
 	const API_ROOT = 'https://api.fitbit.com';
+
+	/**
+	 * FitBit oAuth2 Authorization token.
+	 *
+	 * @access private
+	 * @var string
+	 */
 	private $auth_token = '';
 
+	/**
+	 * Sets up object properties.
+	 *
+	 * @access public
+	 *
+	 * @param string $auth_token The oAuth2 Authorization token.
+	 *
+	 * @return void
+	 */
 	public function __construct( $auth_token ) {
 		$this->auth_token = $auth_token;
 	}
 
+	/**
+	 * Retrieves information of the currently authorized FitBit user.
+	 *
+	 * @access public
+	 *
+	 * @return Object User data.
+	 */
 	public function get_current_user_info() {
 		$cache_key = md5( 'fitpress:get_current_user_info:' . $this->auth_token );
 		$data = get_transient( $cache_key );
@@ -27,6 +62,15 @@ class FitBit_API_Client {
 		return $data->user;
 	}
 
+	/**
+	 * Retrieves heart rate information.
+	 *
+	 * @access public
+	 *
+	 * @param string $date The end date of the period specified in the format yyyy-MM-dd or 'today'.
+	 *
+	 * @return Object Heart rate data.
+	 */
 	public function get_heart_rate( $date ) {
 		$cache_key = md5( 'fitpress:get_heart_rate:' . $date . ':' . $this->auth_token );
 		$data = get_transient( $cache_key );
@@ -54,12 +98,23 @@ class FitBit_API_Client {
 		return $data->{'activities-heart'}[0];
 	}
 
-	public function get_time_series( $series_type, $end_date, $range ) {
-		$cache_key = md5( 'fitpress:get_time_series:' . $series_type . ':' . $end_date . ':' . $range . ':' . $this->auth_token );
+	/**
+	 * Retrieves information about a time series.
+	 *
+	 * @access public
+	 *
+	 * @param string $resource_path The resource path; see options in the "Resource Path Options" FitBit API Documentation.
+	 * @param string $end_date      The end date of the period specified in the format yyyy-MM-dd or 'today'.
+	 * @param string $period        The range for which data will be returned. Options are 1d, 7d, 30d, 1w, 1m, 3m, 6m, 1y.
+	 *
+	 * @return Object Heart rate data.
+	 */
+	public function get_time_series( $resource_path, $end_date, $period ) {
+		$cache_key = md5( 'fitpress:get_time_series:' . $resource_path . ':' . $end_date . ':' . $period . ':' . $this->auth_token );
 		$data = get_transient( $cache_key );
 
 		if ( false === $data ) {
-			$data = $this->get( '/1/user/-/activities/' . rawurlencode( $series_type ) . '/date/' . rawurlencode( $end_date ) . '/' . rawurlencode( $range ) . '.json' );
+			$data = $this->get( '/1/user/-/activities/' . rawurlencode( $resource_path ) . '/date/' . rawurlencode( $end_date ) . '/' . rawurlencode( $period ) . '.json' );
 
 			// Do not cache WP_Error.
 			if ( isset( $data->errors ) ) {
@@ -78,9 +133,19 @@ class FitBit_API_Client {
 
 			set_transient( $cache_key, $data, $expiry );
 		}
-		return $data->{"activities-$series_type"};
+		return $data->{"activities-$resource_path"};
 	}
 
+	/**
+	 * Sends a POST request to the FitBit API.
+	 *
+	 * @access public
+	 *
+	 * @param string $endpoint The API endpoint to be requested.
+	 * @param string $fields   Any necessary arguments to the API endpoint.
+	 *
+	 * @return Object|WP_Error API Object on success.  WP_Error on fail.
+	 */
 	public function post( $endpoint, $fields = array() ) {
 		$url = self::API_ROOT . $endpoint;
 
@@ -94,9 +159,7 @@ class FitBit_API_Client {
 		$response = wp_remote_post( $url, $args );
 
 		if ( is_wp_error( $response ) ) {
-			$error_message = $response->get_error_message();
-			echo 'Something went wrong: ' . esc_html( $error_message );
-			$return = (object) array();
+			$return = $response;
 		} else {
 			$return = json_decode( $response['body'] );
 			$return->http_response_code = $response['response']['code'];
@@ -106,8 +169,14 @@ class FitBit_API_Client {
 	}
 
 	/**
-	 * @param string $endpoint, e.g. "/me"
-	 * @param array $query, e.g. array('fields' => 'ID,title')
+	 * Sends a GET request to the FitBit API.
+	 *
+	 * @access public
+	 *
+	 * @param string $endpoint The API endpoint to be requested.
+	 * @param string $query    Any necessary arguments to the API endpoint.
+	 *
+	 * @return Object|WP_Error API Object on success.  WP_Error on fail.
 	 */
 	public function get( $endpoint, $query = null ) {
 		$query = ( is_array( $query ) ) ? http_build_query( $query ) : $query;
@@ -147,7 +216,16 @@ class FitBit_API_Client {
 		return $return;
 	}
 
-	function auth_token_to_user_id( $auth_token ) {
+	/**
+	 * Retrieves a WordPress user ID from a FitBit API token.
+	 *
+	 * @access public
+	 *
+	 * @param string $auth_token The oAuth2 Authorization token.
+	 *
+	 * @return bool|int WordPress user ID on success, false on failure.
+	 */
+	public function auth_token_to_user_id( $auth_token ) {
 		$fitpress_options = get_option( 'fitpress' );
 
 		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
@@ -161,7 +239,16 @@ class FitBit_API_Client {
 		return false;
 	}
 
-	function check_token_refresh( $auth_token ) {
+	/**
+	 * Checks if an expired auth token can be refreshed.
+	 *
+	 * @access public
+	 *
+	 * @param string $auth_token The oAuth2 Authorization token.
+	 *
+	 * @return void
+	 */
+	public function check_token_refresh( $auth_token ) {
 		require_once( 'fitpress-oauth2-client.php' );
 		$user_id = $this->auth_token_to_user_id( $auth_token );
 		$oauth_client = FitPress::get_fitbit_oauth2_client();
