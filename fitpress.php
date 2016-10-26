@@ -164,7 +164,7 @@ class FitPress {
 
 		array_walk( $steps, function ( &$v, $k ) {
 			$v = array(
-				$v->dateTime,
+				$v->dateTime, // @codingStandardsIgnoreLine.
 				intval( $v->value ),
 			);
 		} );
@@ -405,7 +405,7 @@ ENDHTML;
 		$auth_meta = array(
 			'token' => $access_token,
 			'refresh_token' => $auth_response->refresh_token,
-			'name' => $user_info->fullName,
+			'name' => $user_info->fullName, // @codingStandardsIgnoreLine.
 		);
 
 		$this->fitpress_update_user_meta( $user_id, 'fitpress_credentials', $auth_meta );

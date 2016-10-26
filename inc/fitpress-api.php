@@ -193,7 +193,7 @@ class FitBit_API_Client {
 			),
 		);
 
-		$response = wp_remote_get( $url, $args );
+		$response = wp_remote_get( $url, $args ); // @codingStandardsIgnoreLine.
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		} else {
@@ -203,7 +203,7 @@ class FitBit_API_Client {
 			// Expired token?  Refresh and retry.
 			if ( isset( $return->errors ) && is_array( $return->errors ) && 'expired_token' === $return->errors[0]->errorType ) {
 				$this->check_token_refresh( $this->auth_token );
-				$secondary_response = wp_remote_get( $url, $args );
+				$secondary_response = wp_remote_get( $url, $args ); // @codingStandardsIgnoreLine.
 				if ( is_wp_error( $secondary_response ) ) {
 					return $response;
 				} else {
