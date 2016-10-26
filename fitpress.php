@@ -64,7 +64,6 @@ class FitPress {
 		add_shortcode( 'heartrate', array( $this, 'fitpress_shortcode_heartrate' ) );
 		add_shortcode( 'steps', array( $this, 'fitpress_shortcode_steps' ) );
 		wp_register_script( 'jsapi', 'https://www.google.com/jsapi' );
-		add_action( 'wp_enqueue_scripts', array( $this, 'fitpress_scripts' ) );
 		add_filter( 'allowed_redirect_hosts' , array( $this, 'fitpress_allowed_redirect_hosts' ) , 10 );
 	}
 
@@ -81,17 +80,6 @@ class FitPress {
 		$hosts[] = 'www.fitbit.com';
 		$hosts[] = 'api.fitbit.com';
 		return $hosts;
-	}
-
-	/**
-	 * Enqueues required scripts.
-	 *
-	 * @access public
-	 *
-	 * @return void
-	 */
-	public function fitpress_scripts() {
-		wp_enqueue_script( 'jsapi' );
 	}
 
 	/**
@@ -174,32 +162,30 @@ class FitPress {
 
 		$steps_json = wp_json_encode( $steps );
 
-		$output = '';
-		$output .= <<<ENDHTML
-<script type="text/javascript">
-	google.load('visualization', '1.0', {'packages':['corechart', 'bar']});
-	google.setOnLoadCallback(function() {
-		var data = google.visualization.arrayToDataTable({$steps_json});
-		var options = {
-			title: 'Steps per day',
-			hAxis: {
-				title: 'Date',
-				format: 'Y-m-d'
-			},
-			vAxis: {
-				title: 'Steps'
-			}
-		};
-		var chart = new google.visualization.ColumnChart(document.getElementById('chart_div-{$instance}'));
-		chart.draw(data, options);
-	});
-
-</script>
-<div id="chart_div-{$instance}"></div>
+		$inline_script = <<<ENDHTML
+google.load('visualization', '1.0', {'packages':['corechart', 'bar']});
+google.setOnLoadCallback(function() {
+	var data = google.visualization.arrayToDataTable({$steps_json});
+	var options = {
+		title: 'Steps per day',
+		hAxis: {
+			title: 'Date',
+			format: 'Y-m-d'
+		},
+		vAxis: {
+			title: 'Steps'
+		}
+	};
+	var chart = new google.visualization.ColumnChart(document.getElementById('chart_div-{$instance}'));
+	chart.draw(data, options);
+});
 ENDHTML;
+		wp_enqueue_script( 'jsapi' );
+		wp_add_inline_script( 'jsapi', $inline_script );
+		$div_container = '<div id="chart_div-' . esc_attr( $instance ) . '"></div>';
 
 		$instance++;
-		return $output;
+		return $div_container;
 	}
 
 	/**
