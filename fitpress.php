@@ -94,6 +94,7 @@ class FitPress {
 	public function fitpress_shortcode_heartrate( $atts ) {
 		$atts = shortcode_atts( array(
 			'date' => null,
+			'user' => get_post_field( 'post_author', get_the_ID() ),
 		), $atts );
 
 		if ( null === $atts['date'] ) {
@@ -103,7 +104,7 @@ class FitPress {
 
 		$fitbit = $this->fitbit_api();
 
-		$result = $fitbit->get_heart_rate( $atts['date'] );
+		$result = $fitbit->get_heart_rate( $atts['date'], FitBit_API_Client::get_fitbit_user_id( $atts['user'] ) );
 
 		if ( is_wp_error( $result ) ) {
 			return $result->get_error_message();
@@ -231,6 +232,7 @@ ENDHTML;
 	 */
 	public static function get_fitbit_oauth2_client() {
 		require_once( 'inc/fitpress-oauth2-client.php' );
+		require_once( 'inc/fitpress-api.php' );
 		$user_id = get_current_user_id();
 		$redirect_url = admin_url( 'admin-post.php?action=fitpress_auth_callback' );
 		return new FitBit_OAuth2_Client( get_option( 'fitpress_api_id' ), get_option( 'fitpress_api_secret' ), esc_url_raw( $redirect_url ), FITPRESS_CLIENT_STATE_KEY );
@@ -394,6 +396,7 @@ ENDHTML;
 			'name' => $user_info->fullName, // @codingStandardsIgnoreLine.
 		);
 
+		$this->fitpress_update_user_meta( $user_id, 'fitpress_user_profile', $user_info );
 		$this->fitpress_update_user_meta( $user_id, 'fitpress_credentials', $auth_meta );
 
 		$this->redirect_to_user( $user_id );

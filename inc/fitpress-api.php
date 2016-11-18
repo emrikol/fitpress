@@ -67,16 +67,23 @@ class FitBit_API_Client {
 	 *
 	 * @access public
 	 *
-	 * @param string $date The end date of the period specified in the format yyyy-MM-dd or 'today'.
+	 * @param string $date           The end date of the period specified in the format yyyy-MM-dd or 'today'.
+	 * @param string $fitbit_user_id The Fitbit encoded User ID.
 	 *
 	 * @return Object Heart rate data.
 	 */
-	public function get_heart_rate( $date ) {
-		$cache_key = md5( 'fitpress:get_heart_rate:' . $date . ':' . $this->auth_token );
+	public function get_heart_rate( $date, $fitbit_user_id = '-' ) {
+		if ( '-' === $fitbit_user_id ) {
+			$auth_token = $this->auth_token;
+		} else {
+			$auth_token = $this->user_id_to_auth_token( $this->get_wordpress_user_id( $fitbit_user_id ) );
+		}
+
+		$cache_key = md5( 'fitpress:get_heart_rate:' . $date . ':' . $auth_token );
 		$data = get_transient( $cache_key );
 
 		if ( false === $data ) {
-			$data = $this->get( '/1/user/-/activities/heart/date/' . rawurlencode( $date ) . '/1d.json' );
+			$data = $this->get( '/1/user/' . $fitbit_user_id . '/activities/heart/date/' . rawurlencode( $date ) . '/1d.json', null, $auth_token );
 
 			// Do not cache WP_Error.
 			if ( isset( $data->errors ) ) {
@@ -173,12 +180,17 @@ class FitBit_API_Client {
 	 *
 	 * @access public
 	 *
-	 * @param string $endpoint The API endpoint to be requested.
-	 * @param string $query    Any necessary arguments to the API endpoint.
+	 * @param string $endpoint   The API endpoint to be requested.
+	 * @param string $query      Any necessary arguments to the API endpoint.
+	 * @param string $auth_token The FitBit Auth token.
 	 *
 	 * @return Object|WP_Error API Object on success.  WP_Error on fail.
 	 */
-	public function get( $endpoint, $query = null ) {
+	public function get( $endpoint, $query = null, $auth_token = null ) {
+		if ( null === $auth_token ) {
+			$auth_token = $this->auth_token;
+		}
+
 		$query = ( is_array( $query ) ) ? http_build_query( $query ) : $query;
 
 		$url = self::API_ROOT . $endpoint;
@@ -189,7 +201,7 @@ class FitBit_API_Client {
 
 		$args = array(
 			'headers' => array(
-				'Authorization' => 'Bearer ' . $this->auth_token,
+				'Authorization' => 'Bearer ' . $auth_token,
 			),
 		);
 
@@ -202,7 +214,7 @@ class FitBit_API_Client {
 
 			// Expired token?  Refresh and retry.
 			if ( isset( $return->errors ) && is_array( $return->errors ) && 'expired_token' === $return->errors[0]->errorType ) {
-				$this->check_token_refresh( $this->auth_token );
+				$this->check_token_refresh( $auth_token );
 				$secondary_response = wp_remote_get( $url, $args ); // @codingStandardsIgnoreLine.
 				if ( is_wp_error( $secondary_response ) ) {
 					return $response;
@@ -231,6 +243,67 @@ class FitBit_API_Client {
 		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
 			foreach ( $fitpress_options['user_meta'] as $user_id => $user_meta ) {
 				if ( isset( $user_meta['fitpress_credentials']['token'] ) && $user_meta['fitpress_credentials']['token'] === $auth_token ) {
+					return $user_id;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Retrieves a WordPress user ID from a FitBit API token.
+	 *
+	 * @access public
+	 *
+	 * @param int $user_id WordPress user ID.
+	 *
+	 * @return mixed $auth_token The oAuth2 Authorization token on success, false on failure.
+	 */
+	public function user_id_to_auth_token( $user_id ) {
+		$fitpress_credentials = FitPress::fitpress_get_user_meta( $user_id, 'fitpress_credentials' );
+
+		if ( isset( $fitpress_credentials['token'] ) ) {
+			return $fitpress_credentials['token'];
+		}
+
+		return false;
+	}
+
+	/**
+	 * Retrieves a FitBit User ID from a WordPress ID.
+	 *
+	 * @access public
+	 *
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return string|false An encoded FitBit User ID on success, false on failure.
+	 */
+	public static function get_fitbit_user_id( $user_id ) {
+		$fitpress_user_profile = FitPress::fitpress_get_user_meta( $user_id, 'fitpress_user_profile' );
+
+		if ( isset( $fitpress_user_profile->encodedId ) ) { // @codingStandardsIgnoreLine.
+			return $fitpress_user_profile->encodedId; // @codingStandardsIgnoreLine.
+		}
+
+		return false;
+	}
+
+	/**
+	 * Retrieves a WordPress ID from a FitBit User ID.
+	 *
+	 * @access public
+	 *
+	 * @param string $encoded_id An encoded FitBit User ID.
+	 *
+	 * @return mixed $user_id The WordPress User ID on success, false on failure.
+	 */
+	public static function get_wordpress_user_id( $encoded_id ) {
+		$fitpress_options = get_option( 'fitpress' );
+
+		if ( isset( $fitpress_options['user_meta'] ) && is_array( $fitpress_options['user_meta'] ) ) {
+			foreach ( $fitpress_options['user_meta'] as $user_id => $user_meta ) {
+				if ( isset( $user_meta['fitpress_user_profile']->encodedId ) && $user_meta['fitpress_user_profile']->encodedId === $encoded_id ) {
 					return $user_id;
 				}
 			}

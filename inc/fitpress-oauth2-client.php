@@ -94,7 +94,7 @@ class FitBit_OAuth2_Client {
 	 * @return void
 	 */
 	public function __construct( $client_id, $client_secret, $client_redirect_uri, $state_key, $time_window_length = self::DEFAULT_TIME_WINDOW ) {
-		include_once( 'fitpress-api.php' );
+		require_once( 'fitpress-api.php' );
 
 		$this->id = $client_id;
 		$this->secret = $client_secret;
